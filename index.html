@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Practical Viva Q&A Vault</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); padding-bottom: 84px; }
+    header {
+      background: var(--primary); color: #fff; padding: 16px;
+      position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    header h1 { margin: 0; font-size: 1.15rem; }
+    header p { margin: 4px 0 0; font-size: 0.8rem; opacity: 0.9; }
+    .screen { display: none; padding: 14px; }
+    .screen.active { display: block; }
+
+    /* Filters */
+    .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; }
+    .pill {
+      border: 1px solid var(--border); background: #fff; color: var(--text);
+      padding: 7px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    }
+    .pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Cards */
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .badge { font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+    .subj { background: #dbeafe; color: #1e40af; }
+    .batch { background: #f3f4f6; color: #374151; }
+    .verified { background: var(--green-bg); color: var(--green); }
+    .q-text { font-size: 0.96rem; line-height: 1.45; margin: 6px 0 12px; font-weight: 500; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; }
+    .upvote-btn {
+      border: 1px solid var(--border); background: #f9fafb; padding: 6px 12px;
+      border-radius: 8px; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .upvote-btn.voted { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+
+    /* Floating Post Button */
+    .fab {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 32px); max-width: 448px; background: var(--primary); color: #fff;
+      border: none; border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 700;
+      box-shadow: 0 6px 16px rgba(37,99,235,0.35); cursor: pointer;
+    }
+
+    /* Form */
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 12px 0 6px; }
+    select, input, textarea {
+      width: 100%; padding: 11px; border: 1px solid #d1d5db; border-radius: 10px;
+      font-size: 0.95rem; background: #fff;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .btn {
+      width: 100%; padding: 13px; border: none; border-radius: 10px;
+      font-size: 0.96rem; font-weight: 700; cursor: pointer; margin-top: 14px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: var(--text); }
+
+    /* Confirmation */
+    .success-box {
+      background: var(--green-bg); border: 1px solid #86efac; border-radius: 12px;
+      padding: 16px; text-align: center; margin-bottom: 14px;
+    }
+    .success-box h2 { margin: 0 0 6px; color: #15803d; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Practical Viva Q&A Vault</h1>
+    <p>ISC / CBSE Class 11–12 • Live Lab Batch Examiner Feed</p>
+  </header>
+
+  <!-- SCREEN 1: FEED -->
+  <section id="screen-feed" class="screen active">
+    <div class="filters">
+      <button class="pill active" onclick="setFilter('All', this)">All</button>
+      <button class="pill" onclick="setFilter('Physics', this)">Physics</button>
+      <button class="pill" onclick="setFilter('Chemistry', this)">Chemistry</button>
+      <button class="pill" onclick="setFilter('CS', this)">CS</button>
+    </div>
+    <div id="feed-list"></div>
+    <button class="fab" onclick="showScreen('screen-post')">+ Post Examiner Question</button>
+  </section>
+
+  <!-- SCREEN 2: POST QUESTION -->
+  <section id="screen-post" class="screen">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:1.1rem;">Post a Viva Question (&lt;30s)</h2>
+      <label for="subj">Subject</label>
+      <select id="subj">
+        <option value="Physics">Physics</option>
+        <option value="Chemistry">Chemistry</option>
+        <option value="CS">CS</option>
+      </select>
+
+      <label for="batch">Batch Number</label>
+      <input id="batch" type="text" placeholder="e.g., Batch 1, Batch 2" value="Batch 1" />
+
+      <label for="question">Question Asked by Examiner</label>
+      <textarea id="question" placeholder="Type the exact viva question asked..."></textarea>
+
+      <button class="btn btn-primary" onclick="submitQuestion()">Verify and Post Question</button>
+      <button class="btn btn-secondary" onclick="showScreen('screen-feed')">Cancel</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: SUBMITTED -->
+  <section id="screen-done" class="screen">
+    <div class="success-box">
+      <h2>✓ Question Submitted!</h2>
+      <p style="margin:0;font-size:0.88rem;color:#166534;">Added to the live vault for upcoming lab batches.</p>
+    </div>
+    <div id="submitted-preview" class="card"></div>
+    <button class="btn btn-primary" onclick="showScreen('screen-feed')">Back to Feed</button>
+    <button class="btn btn-secondary" onclick="shareBatch()">Share Batch Update</button>
+  </section>
+</div>
+
+<script>
+  const defaultQuestions = [
+    { id: 1, subject: 'Physics', batch: 'Batch 1 • Today', text: "State Lenz's law of electromagnetic induction and how do you verify the direction of induced current in the lab?", votes: 18, voted: false },
+    { id: 2, subject: 'Physics', batch: 'Batch 1 • Today', text: "Explain the Zener diode V-I characteristics in reverse bias. Why does breakdown voltage stay constant?", votes: 14, voted: false },
+    { id: 3, subject: 'Physics', batch: 'Batch 2 • Today', text: "Why must the plane of the Tangent Galvanometer coil be aligned along the magnetic meridian before taking readings?", votes: 11, voted: false },
+    { id: 4, subject: 'Chemistry', batch: 'Batch 1 • Today', text: "Why do we add dilute H2SO4 instead of HCl or HNO3 during KMnO4 titration against Mohr's salt?", votes: 15, voted: false },
+    { id: 5, subject: 'CS', batch: 'Batch 1 • Today', text: "What is the difference between a stack overflow condition and linear queue overflow in Java/Python?", votes: 9, voted: false }
+  ];
+
+  let questions = JSON.parse(localStorage.getItem('viva_vault_q')) || defaultQuestions;
+  let currentFilter = 'All';
+  let lastSubmitted = null;
+
+  function save() { localStorage.setItem('viva_vault_q', JSON.stringify(questions)); }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (id === 'screen-feed') renderFeed();
+    window.scrollTo(0, 0);
+  }
+
+  function setFilter(subj, el) {
+    currentFilter = subj;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderFeed();
+  }
+
+  function toggleVote(id) {
+    questions = questions.map(q => {
+      if (q.id === id) {
+        q.voted = !q.voted;
+        q.votes += q.voted ? 1 : -1;
+      }
+      return q;
+    });
+    save();
+    renderFeed();
+  }
+
+  function renderFeed() {
+    const list = document.getElementById('feed-list');
+    const filtered = currentFilter === 'All' ? questions : questions.filter(q => q.subject === currentFilter);
+    list.innerHTML = filtered.map(q => `
+      <div class="card">
+        <div class="meta">
+          <div>
+            <span class="badge subj">${q.subject}</span>
+            <span class="badge batch">${q.batch}</span>
+          </div>
+          <span class="badge verified">✓ Peer Verified</span>
+        </div>
+        <div class="q-text">${q.text}</div>
+        <div class="card-footer">
+          <button class="upvote-btn ${q.voted ? 'voted' : ''}" onclick="toggleVote(${q.id})">
+            ▲ Helpful (${q.votes})
+          </button>
+          <span style="font-size:0.78rem;color:var(--muted);">ISC/CBSE Lab</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function submitQuestion() {
+    const subject = document.getElementById('subj').value;
+    const batch = document.getElementById('batch').value.trim() || 'Batch 1';
+    const text = document.getElementById('question').value.trim();
+    if (!text) { alert('Please enter the viva question first.'); return; }
+
+    lastSubmitted = { id: Date.now(), subject, batch: batch + ' • Just now', text, votes: 1, voted: true };
+    questions.unshift(lastSubmitted);
+    save();
+    document.getElementById('question').value = '';
+
+    document.getElementById('submitted-preview').innerHTML = `
+      <div class="meta">
+        <span class="badge subj">${lastSubmitted.subject}</span>
+        <span class="badge batch">${lastSubmitted.batch}</span>
+        <span class="badge verified">✓ Peer Verified</span>
+      </div>
+      <div class="q-text">${lastSubmitted.text}</div>
+    `;
+    showScreen('screen-done');
+  }
+
+  function shareBatch() {
+    const msg = lastSubmitted ? `New ${lastSubmitted.subject} Viva Q (${lastSubmitted.batch}): "${lastSubmitted.text}"` : 'Check out Practical Viva Q&A Vault!';
+    if (navigator.share) { navigator.share({ title: 'Practical Viva Q&A Vault', text: msg }); }
+    else { navigator.clipboard.writeText(msg); alert('Copied batch update to clipboard!'); }
+  }
+
+  renderFeed();
+</script>
+</body>
+</html>
